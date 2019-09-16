@@ -1,0 +1,59 @@
+package example
+
+import errors as goerrors
+import fmt
+import reflect
+import sort
+import github.com/spy16/parens
+
+def IntMax(a:int, b:int) int:
+	if a < b:
+		return b
+
+	return a
+
+def IntIndexOf(sl:*sort.IntSlice, target:int) int:
+	each *sl as idx, val:
+		if val == target:
+			return idx
+
+	return -1
+
+def LispToGoString(scope:*parens.Scope, exp:*parens.Expr) string:
+	try:
+		sym = cast *exp to parens.StringExpr
+	except CastError as e:
+		err = fmt.Errorf "argument must be a String, not '%s'" (reflect.TypeOf exp)
+		raise err
+
+	try:
+		strEvaled = sym.Eval *scope
+		str = cast strEvaled to string
+		return str
+	except CastError as e:
+		raise fmt.Errorf "unable to parse arg 0 as Go string"
+	except Exception:
+		raise // just a demonstration, would be implicit
+
+
+// now for types stuff
+
+deftype ModuleLookupTable as map[string]Module
+
+defiface Module:
+	ExampleMethod(parens.Scope) nil
+
+deftype Blah:
+	Things *[]string
+
+	def constructor(scope:*parens.Scope):
+		// uncaught exceptions just bubble up
+		// ?= will try to auto-cast the rhv to lh type and raises CastError
+		// if unsuccessful
+		try:
+			self.Things ?= PullGlobalThingsFromScope scope
+		except CastError as e:
+			raise fmt.Errorf "expected $0 to be type *[]string, got %t" e.Source.Value
+
+		// the above could also have been written as
+		// self.Things = cast (PullGlobalThingsFromScope scope) to *[]string
